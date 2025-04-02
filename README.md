@@ -15,7 +15,12 @@ This repository is for the work of the CoSAI Workstream 4, Secure Design Pattern
 The goal of this workstream is to research and develop secure design patterns for AI-based agentic systems including updates to AI usage threat models, conceptual high-level secure design pattern(s), impacts to secure infrastructure design, and other agent integration and use based needs. Further information can be found [here](https://github.com/cosai-oasis/oasis-open-project/blob/main/WORKSTREAMS.md).
 
 ### Workstream Leads
-* TBC
+* Ian Molloy (IBM)
+* Sarah Novotny (Gen Lab)
+
+#### Supporting Leads
+* Alex Polyakov (Adversa)
+* Raghuram Yeluri (Intel)
 
 <!--## Badges [optional – TBD]
 
@@ -42,11 +47,11 @@ Please make sure to update it on a regular basis – when new files or folder ar
 Please see the [CoSAI Contributing policy](./CONTRIBUTING.md) for more details.
 
 <!-- Give a brief explanation of what kind of contributions you are looking for and what your requirements are for accepting them. Then link to
-[CONTRIBUTING.md](link to your contributing.md file) for more information and also add a link to [CODE_OF_CONDUCT](link to your code_of_conduct.md file).-->
+[CONTRIBUTING.md](link to your contributing.md file) for more information and also add a link to [CODE_OF_CONDUCT](link to your code_of_conduct.md file).
 
 ## Authors and Maintainers - TBD
 
-Adds names / GitHub profile links for those who have contributed to this repository. If you have a maintainer's list, link to it here.
+Adds names / GitHub profile links for those who have contributed to this repository. If you have a maintainer's list, link to it here.-->
 
 ## Support
 For issues or features, please use Github issues. You can also join the workstream mailing list by posting an empty email to [cosai-agentic-systems-ws@lists.oasis-open-projects.org](mailto:	cosai-agentic-systems-ws@lists.oasis-open-projects.org). You can read the mailing list archive [here](https://lists.oasis-open-projects.org/g/cosai-agentic-systems-ws/topics).
