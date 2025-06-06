@@ -1,4 +1,4 @@
-# [Zero-Trust MCP Handshake]
+# [DRAFT -- RFC Zero-Trust MCP Handshake]
 
 **Authors:**
 @David Pierce, MPA
