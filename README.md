@@ -14,6 +14,10 @@ This repository is for the work of the CoSAI Workstream 4, Secure Design Pattern
 ### About this workstream
 The goal of this workstream is to research and develop secure design patterns for AI-based agentic systems including updates to AI usage threat models, conceptual high-level secure design pattern(s), impacts to secure infrastructure design, and other agent integration and use based needs. Further information can be found [here](https://github.com/cosai-oasis/oasis-open-project/blob/main/WORKSTREAMS.md).
 
+### Published work from this workstream
+
+[CoSAI Principles for Secure-by-Design Agentic Systems](https://github.com/cosai-oasis/cosai-tsc/blob/main/security-principles-for-agentic-systems.md)
+
 ### Workstream Leads
 * Ian Molloy (IBM)
 * Sarah Novotny (GenLab)
