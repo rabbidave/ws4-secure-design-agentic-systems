@@ -20,7 +20,7 @@ The goal of this workstream is to research and develop secure design patterns fo
 
 ### Workstream Leads
 * Ian Molloy (IBM)
-* Sarah Novotny (GenLab)
+* Sarah Novotny 
 
 #### Supporting Leads
 * Alex Polyakov (Adversa)
