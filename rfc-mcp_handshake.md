@@ -388,3 +388,146 @@ Class 4-5 operations use standard MCP 2.1. Class 1-3 layer zero-trust extensions
   }
 }
 ---
+---
+
+
+### Token Signing and Verification
+
+This section clarifies the cryptographic signing requirements for ephemeral tokens in the MCP Handshake architecture. The security of the system relies on the **cardinality binding** between identity, tool, and parameters - not on any specific signing algorithm.
+
+### Key Security Property: Cardinality Binding
+
+The critical security property is the cryptographic binding of three elements:
+1. **Identity** (WHO) - The authenticated user from OAuth
+2. **Tool** (WHAT) - The specific tool being invoked
+3. **Parameters** (WITH WHICH) - The exact parameters via SHA256 hash
+
+This binding ensures that a token authorizing `user-123` to execute `create_refund` with specific parameters cannot be used to:
+- Authorize a different user
+- Execute a different tool
+- Use different parameters
+
+**The signing algorithm is merely the mechanism to ensure this binding cannot be forged.**
+
+### Ephemeral Token Generation
+
+The Remote MCP Service MUST sign ephemeral tokens using a cryptographically secure method:
+
+```javascript
+// Example using HS256 (symmetric)
+const ephemeralToken = jwt.sign({
+  sub: getUserId(sessionToken),              // User ID from OAuth
+  exp: Math.floor(Date.now() / 1000) + 30,  // 30 second TTL
+  jti: uuid.v4(),                           // Unique ID for atomic consumption
+  iss: "mcp-server",                        // Token issuer
+  aud: "mcp-executor",                      // Token audience
+  mcp: {
+    provider: oauthProvider,                // From X-OAuth-Provider header
+    tool: tool,                             // Tool being authorized
+    parameters_hash: parameters_hash,        // SHA256 of parameters
+    oauth_session_id: getSessionId(sessionToken)
+  }
+}, JWT_SECRET, { algorithm: 'HS256' });
+```
+
+### Algorithm Flexibility
+
+The MCP Handshake architecture is **algorithm-agnostic**. Implementers MAY use any secure signing algorithm appropriate for their security requirements:
+
+```javascript
+// Example: Using RS256 (asymmetric)
+const ephemeralToken = jwt.sign(payload, privateKey, { algorithm: 'RS256' });
+
+// Example: Using ES256 (elliptic curve)
+const ephemeralToken = jwt.sign(payload, ecPrivateKey, { algorithm: 'ES256' });
+
+// Example: Future quantum-resistant algorithm
+const ephemeralToken = jwt.sign(payload, quantumKey, { algorithm: 'CRYSTALS-DILITHIUM' });
+```
+
+**Supported algorithms include but are not limited to:**
+- **Symmetric**: HS256, HS384, HS512
+- **Asymmetric**: RS256, RS384, RS512, PS256, PS384, PS512
+- **Elliptic Curve**: ES256, ES384, ES512
+- **Future/Quantum-Resistant**: Any standardized post-quantum algorithms
+
+The choice of algorithm should be based on:
+- Performance requirements
+- Key management capabilities
+- Regulatory compliance needs
+- Future-proofing considerations (e.g., quantum resistance)
+
+### Token Verification
+
+When receiving the ephemeral token, the service MUST:
+
+```javascript
+async function validateAndConsumeToken(token, actualParams) {
+  try {
+    // 1. Verify JWT signature (algorithm-agnostic)
+    const claims = jwt.verify(token, JWT_SECRET_OR_PUBLIC_KEY);
+    
+    // 2. Check expiration
+    if (claims.exp < Date.now() / 1000) {
+      throw new Error("Token expired");
+    }
+    
+    // 3. Validate parameter hash matches (THE CRITICAL BINDING)
+    const actualHash = sha256(JSON.stringify(actualParams));
+    if (actualHash !== claims.mcp.parameters_hash) {
+      throw new Error("Parameter tampering detected");
+    }
+    
+    // 4. Atomically consume the token
+    const consumed = await redis.eval(
+      CONSUME_TOKEN_SCRIPT,
+      1,
+      `token:${claims.jti}`
+    );
+    
+    if (!consumed) {
+      throw new Error("Token already used");
+    }
+    
+    return claims;
+  } catch (error) {
+    throw new Error(`Token validation failed: ${error.message}`);
+  }
+}
+```
+
+### Security Considerations
+
+1. **Key Management**: Regardless of algorithm choice, signing keys MUST be:
+   - Stored securely (e.g., HSM, secure key management service)
+   - Rotated periodically
+   - Never exposed in logs or error messages
+
+2. **Algorithm Migration**: Systems SHOULD be designed to support algorithm migration:
+   ```javascript
+   // Support multiple algorithms during transition
+   const algorithms = ['HS256', 'RS256', 'ES256'];
+   const claims = jwt.verify(token, keyResolver, { algorithms });
+   ```
+
+3. **Quantum Readiness**: While current algorithms are sufficient, implementers SHOULD:
+   - Design systems to support algorithm updates
+   - Monitor NIST post-quantum cryptography standardization
+   - Plan for migration when quantum-resistant algorithms mature
+
+### Implementation Notes
+
+- The `jti` (JWT ID) MUST be globally unique to enable atomic consumption
+- The `parameters_hash` MUST use a consistent serialization method
+- Token TTL (30 seconds) is a balance between security and usability
+- The atomic consumption mechanism (e.g., Redis EVAL) is algorithm-independent
+
+### Summary
+
+The MCP Handshake's security comes from the **cryptographic binding of identity→tool→parameters**, not from any specific signing algorithm. This design allows:
+- Flexibility in algorithm choice
+- Future-proofing against quantum threats  
+- Adaptation to different regulatory environments
+- Performance optimization based on use case
+
+The signing algorithm is simply the cryptographic proof that this binding has not been tampered with - any secure algorithm that provides this guarantee is acceptable.
