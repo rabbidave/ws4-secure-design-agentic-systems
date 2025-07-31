@@ -372,6 +372,7 @@ Class 4-5 operations use standard MCP 2.1. Class 1-3 layer zero-trust extensions
 
 #### Ephemeral Token Claims
 
+```json
 {
   "sub": "user-123",              // REQUIRED: User ID from OAuth
   "iss": "mcp-server",           // REQUIRED: Token issuer
@@ -387,9 +388,9 @@ Class 4-5 operations use standard MCP 2.1. Class 1-3 layer zero-trust extensions
     "oauth_session_id": "oauth-550e8400-e29b-41d4"  // REQUIRED: Links to OAuth session
   }
 }
----
----
+```
 
+---
 
 ### Token Signing and Verification
 
