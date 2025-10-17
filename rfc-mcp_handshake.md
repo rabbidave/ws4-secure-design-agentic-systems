@@ -335,7 +335,7 @@ A dedicated section for reporting errors. This object is **always present** to e
           │ Sensitive Operations (send_money, refund, etc.)
           ▼
 ┌─────────────────┐    2-Phase Flow        ┌──────────────────┐
-│ Enhanced Local  │◄─── Phase 1: Auth  ────┤ Zero-Trust MCP   │
+│ Enhanced Remote │◄─── Phase 1: Auth  ────┤ Zero-Trust MCP   │
 │ MCP Client      │◄─── Phase 2: Execute ──┤ Extension Service│
 └─────────────────┘                        └────────┬─────────┘
                                                     │ Class 1-2 Only
@@ -532,3 +532,4 @@ The MCP Handshake's security comes from the **cryptographic binding of identity�
 - Performance optimization based on use case
 
 The signing algorithm is simply the cryptographic proof that this binding has not been tampered with - any secure algorithm that provides this guarantee is acceptable.
+
