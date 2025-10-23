@@ -54,7 +54,7 @@ graph TD
 | **Config Tampering** | ❌ Not addressed | ⚠️ Detection via logs | ✅ Protected (breadcrumb chain) |
 | **Chain of Custody** | ❌ Not provided | ⚠️ Audit logs only | ✅ Protected (cryptographic chain) |
 
-### Why Zero-Trust MCP w/ CoC Is Strongest
+### Protection Across N-Layers
 
 ```typescript
 // Complete Protection Stack
