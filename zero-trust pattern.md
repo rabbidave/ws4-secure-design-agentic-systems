@@ -57,7 +57,7 @@ graph TD
 ### Protection Across N-Layers
 
 ```typescript
-// Complete Protection Stack
+// Comprehensive not Exhaustive; add more capabilities as needed
 {
   // Layer 1: Parameter binding to Authenticating Identity
   params: {resource_id: "RESOURCE_123", amount: 999.00},
