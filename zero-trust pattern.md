@@ -44,15 +44,20 @@ graph TD
 
 ### Comparative Vulnerability Matrix
 
-| Attack Vector | Traditional Auth | Zero-Trust MCP | Zero-Trust MCP (Enhanced) |
-|--------------|-----------------|----------------|---------------------------|
-| **Parameter Tampering** | ✅ Protected (Session binding) | ✅ Protected (Hash binding) | ✅ Protected (Hash + breadcrumb) |
-| **Replay Attacks** | ❌ Vulnerable (valid window) | ✅ Protected (atomic consumption) | ✅ Protected (atomic + chain) |
-| **Agent Misinterpretation** | ❌ Vulnerable (intent gap) | ✅ Protected (exact params) | ✅ Protected (exact params) |
-| **Race Conditions** | ❌ Vulnerable (no state mgmt) | ✅ Protected (Atomic store) | ✅ Protected (Atomic store) |
-| **TOCTOU Attacks** | ❌ Vulnerable (auto-generation) | ✅ Protected (real-time validation) | ✅ Protected (real-time validation) |
-| **Config Tampering** | ❌ Not addressed | ⚠️ Detection via logs | ✅ Protected (breadcrumb chain) |
-| **Chain of Custody** | ❌ Not provided | ⚠️ Audit logs only | ✅ Protected (cryptographic chain) |
+| Attack Vector | Threat Category | Traditional Auth<br/>(OAuth 2.0 + RBAC) | Zero-Trust MCP<br/>(Base Pattern) | Zero-Trust MCP<br/>(Enhanced w/ CoC) |
+|--------------|:---------------:|-----------------|----------------|---------------------------|
+| **Parameter Tampering**<br/><sub>Attacker modifies parameters between authorization and execution</sub> | **MCP-T5**<br/><sub>Insufficient Integrity Checks</sub> | ❌ Vulnerable<br/><sub>(Session binding only, params not validated)</sub> | ✅ Protected<br/><sub>**Invariant #2**: SHA256 hash binding</sub> | ✅ Protected<br/><sub>**Invariants #2 + #5**: Hash + breadcrumb chain</sub> |
+| **Replay Attacks**<br/><sub>Attacker reuses captured authorization tokens</sub> | **MCP-T1**<br/><sub>Replay Attacks / Session Hijacking</sub> | ❌ Vulnerable<br/><sub>(Tokens valid for minutes/hours)</sub> | ✅ Protected<br/><sub>**Invariant #3**: Atomic JTI consumption</sub> | ✅ Protected<br/><sub>**Invariants #3 + #6**: Atomic + cryptographic proof</sub> |
+| **Token/Session Hijacking**<br/><sub>Attacker steals and uses valid tokens</sub> | **MCP-T1**<br/><sub>Credential/Token Theft<br/>Session Token Leakage</sub> | ❌ Vulnerable<br/><sub>(Long-lived tokens, broad scope)</sub> | ✅ Protected<br/><sub>**Invariants #1 + #4**: 30s TTL + per-action binding</sub> | ✅ Protected<br/><sub>**Invariants #1 + #4 + #6**: 30s TTL + audit chain</sub> |
+| **Agent Misinterpretation**<br/><sub>LLM regenerates different parameters than user intended</sub> | **MCP-T10**<br/><sub>Overreliance on LLM</sub><br/>**MCP-T3**<br/><sub>Prompt Injection</sub> | ❌ Vulnerable<br/><sub>(LLM free to regenerate params)</sub> | ✅ Protected<br/><sub>**Invariant #2**: Hash validates human-approved params</sub> | ✅ Protected<br/><sub>**Invariant #2**: Hash validates human-approved params</sub> |
+| **Parameter Injection**<br/><sub>Attacker injects malicious parameters via prompt injection</sub> | **MCP-T3**<br/><sub>Command Injection</sub><br/>**MCP-T5**<br/><sub>Input Validation Failure</sub> | ❌ Vulnerable<br/><sub>(No param validation at auth time)</sub> | ✅ Protected<br/><sub>**Invariant #2**: Pre-authorization hashing</sub> | ✅ Protected<br/><sub>**Invariant #2**: Pre-authorization hashing</sub> |
+| **Race Conditions**<br/><sub>Concurrent token use or state manipulation</sub> | **MCP-T2**<br/><sub>TOCTOU</sub> | ❌ Vulnerable<br/><sub>(No atomic state management)</sub> | ✅ Protected<br/><sub>**Invariant #3**: Atomic store (Redis/etcd)</sub> | ✅ Protected<br/><sub>**Invariant #3**: Atomic store (Redis/etcd)</sub> |
+| **TOCTOU Attacks**<br/><sub>Time-of-check to time-of-use vulnerabilities</sub> | **MCP-T2**<br/><sub>TOCTOU</sub> | ❌ Vulnerable<br/><sub>(Async validation, stale state)</sub> | ✅ Protected<br/><sub>**Invariant #4**: Real-time validation (<30s)</sub> | ✅ Protected<br/><sub>**Invariant #4**: Real-time validation (<30s)</sub> |
+| **Privilege Escalation**<br/><sub>Attacker uses authorized action for unintended purpose</sub> | **MCP-T2**<br/><sub>Privilege Escalation<br/>Excessive Permissions</sub> | ❌ Vulnerable<br/><sub>(Coarse RBAC, role confusion)</sub> | ✅ Protected<br/><sub>**Invariant #1**: Per-tool granular binding</sub> | ✅ Protected<br/><sub>**Invariants #1 + #6**: Per-tool + audit trail</sub> |
+| **Config Tampering**<br/><sub>Policy engine compromised after authorization</sub> | **MCP-T4**<br/><sub>Missing Integrity Verification</sub><br/>**MCP-T5**<br/><sub>Insufficient Integrity Checks</sub> | ❌ Not addressed<br/><sub>(No config integrity checks)</sub> | ⚠️ Detected<br/><sub>(Audit logs show changes)</sub> | ✅ Protected<br/><sub>**Invariant #5**: Breadcrumb chain validation</sub> |
+| **Chain of Custody Breaks**<br/><sub>Authorization trail becomes non-verifiable</sub> | **MCP-T11**<br/><sub>Lack of Observability</sub><br/>**MCP-T4**<br/><sub>Missing Integrity Verification</sub> | ❌ Not provided<br/><sub>(No cryptographic trail)</sub> | ⚠️ Partial<br/><sub>(Audit logs only, no crypto proof)</sub> | ✅ Protected<br/><sub>**Invariant #6**: Cryptographic chain</sub> |
+
+---
 
 ### Protection Across N-Layers
 
