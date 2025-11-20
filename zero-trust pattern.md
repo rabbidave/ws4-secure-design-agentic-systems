@@ -422,7 +422,7 @@ function validateToolInvocation(tool, metadata) {
 |--------|-------------------------|----------------|
 | **Authorization Granularity** | Role-based, coarse | Per-invocation, cryptographically bound |
 | **Parameter Validation** | ❌ None (trust agent) | ✅ SHA256 hash verification |
-| **Token Lifetime** | Minutes to hours | 30 seconds |
+| **Token Lifetime** | Minutes to hours | configurable |
 | **Replay Protection** | ⚠️ Time-based only | ✅ Atomic JTI consumption |
 | **MITM Resistance** | ⚠️ TLS only | ✅ TLS + DPoP + hash binding |
 | **Agent Misinterpretation** | ❌ Vulnerable | ✅ User-approved params enforced |
