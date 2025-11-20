@@ -1,6 +1,31 @@
 # Zero-Trust MCP Integration Standard
 ## Universal Metadata Layer for Secured Remote Tool Execution
 
+```mermaid
+graph TD
+    subgraph "Interdiction Layer"
+        A[Client Extensions<br/>Browser/IDE Plugins<br/>👤 WHO] -->|Local Session| B[Reverse Proxy<br/>Traffic Gateway<br/>📍 WHERE]
+        B -->|Session Telemetry| C[Policy Engine<br/>Decision Point<br/>📋 WHAT]
+        C -->|Rule Evaluation| D[Validation Framework<br/>Rail Execution<br/>⚙️ HOW]
+    end
+    
+    subgraph "Metadata Requirements"
+        E[Regulatory Context<br/>Compliance Rules<br/>❓ WHY]
+        F[Data Sensitivity<br/>Classification Level<br/>📋 WHAT]
+        G[Contextual State<br/>Retrieved Knowledge<br/>⚙️ HOW]
+    end
+    
+    E --> C
+    F --> C
+    G --> D
+
+    classDef interdiction fill:#e1f5ff,stroke:#0288d1,stroke-width:2px
+    classDef metadata fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    
+    class A,B,C,D interdiction
+    class E,F,G metadata
+```
+
 ### Core Concept
 
 **MCP tool invocation is remote code execution.** This pattern treats every MCP tool call as privileged code execution requiring cryptographic proof-of-intent.
