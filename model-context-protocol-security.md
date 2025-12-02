@@ -68,7 +68,7 @@ This paper focuses on the security aspects of MCP implementations, covering:
 * Best practices for secure MCP deployment and operation  
 * Recommendations for protocol enhancements to address identified security gaps
 
-We are collaborating publicly with Anthropic and the MCP maintainer community to ensure our recommendations are practical and implementable. This work also coordinates with CoSAI's Software Supply Chain Security workstream to ensure comprehensive coverage of agentic system security concerns.
+We are collaborating with Anthropic and the MCP maintainer community to ensure our recommendations are practical and implementable. This work also coordinates with CoSAI's Software Supply Chain Security workstream to ensure comprehensive coverage of agentic system security concerns.
 
 ## Anti-Scope
 
@@ -463,7 +463,7 @@ With `stdio` transport, the MCP server runs as a subprocess of the host applicat
 **Security Recommendations**:
 
 * Appropriate for development and personal use  
-* Use \`stdio\` to avoid DNS rebinding risks: \``stdio`\` transport is strongly recommended for local MCP as this eliminates [DNS rebinding risks that can occur with HTTP-based transports on local servers](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#security-warning)  
+* Use `stdio` to avoid DNS rebinding risks: `stdio` transport is strongly recommended for local MCP as this eliminates [DNS rebinding risks that can occur with HTTP-based transports on local servers](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#security-warning)  
 * Use sandboxing to limit privilege escalation attacks: MCP servers locally requires a sandbox to prevent privilege escalation attacks
 
 ### 6.1.2 Deployment Pattern 2: Single-Tenant MCP Server
