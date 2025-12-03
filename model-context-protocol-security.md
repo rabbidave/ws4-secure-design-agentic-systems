@@ -399,29 +399,43 @@ Organizations deploying MCP-based systems must develop defense-in-depth strategi
 
 **Workstream Leads**
 
-* Sarah Novotny, (sarah.novotny@gmail.com)  
+* Sarah Novotny, ([sarah.novotny@gmail.com](mailto:sarah.novotny@gmail.com))
 * Ian Molloy, IBM ([molloyim@us.ibm.com](mailto:molloyim@us.ibm.com))  
-* Raghu Yeluri, Intel (raghuram.yeluri@intel.com)  
-* Alex Polyakov, Adversa AI (alex@adversa.ai)
+* Raghu Yeluri, Intel ([raghuram.yeluri@intel.com](mailto:raghuram.yeluri@intel.com))
+* Alex Polyakov, Adversa AI ([alex@adversa.ai](mailto:alex@adversa.ai))
 
 **Editors**
 
-* Daniel Rohrer, NVIDIA (drohrer@nvidia.com)  
+* Daniel Rohrer, NVIDIA ([drohrer@nvidia.com](mailto:drohrer@nvidia.com))
 * Jenn Newton, Anthropic ([jenn@anthropic.com](mailto:jenn@anthropic.com))  
-* David LaBianca, Google (ddlb@google.com)  
-* Shrey Bagga, Cisco(sbagga@cisco.com)
+* David LaBianca, Google ([ddlb@google.com](mailto:ddlb@google.com))
 
 **Contributors**
 
-* John Cavanaugh, ProCap360 ([johncavanaugh@procap360.com](mailto:johncavanaugh@procap360.com) )  
-* Chooi Low, Dell ( [Chooi.Low@dell.com](mailto:Chooi.Low@dell.com))  
+* Shrey Bagga, Cisco ([sbagga@cisco.com](mailto:sbagga@cisco.com))
+* Damian Bogel, Google ([kele@google.com](mailto:kele@google.com))
+* John Cavanaugh, ProCap360 ([johncavanaugh@procap360.com](mailto:johncavanaugh@procap360.com))  
+* Jason Clinton, Anthropic ([j@anthropic.com](mailto:j@anthropic.com))
+* Andre Elizondo, Wiz ([andre.elizondo@wiz.io](mailto:andre.elizondo@wiz.io))
+* Riggs Goodman III, Amazon ([goriggs@amazon.com](mailto:goriggs@amazon.com))
+* Hani Jamjoom, IBM ([jamjoom@us.ibm.com](mailto:jamjoom@us.ibm.com))
+* Chooi Low, Dell ([Chooi.Low@dell.com](mailto:Chooi.Low@dell.com))
+* Victor Lu ([victorjunlu@gmail.com](mailto:victorjunlu@gmail.com))
+* Michael Medeiros, Cisco ([mimedeir@cisco.com](mailto:mimedeir@cisco.com))
+* Grant Miller, IBM ([millerg@us.ibm.com](mailto:millerg@us.ibm.com))
+* David Pierce, PayPal ([davpierce@paypal.com](mailto:davpierce@paypal.com))
+* Xiaokui Shu, IBM ([xiaokui.shu@ibm.com](mailto:xiaokui.shu@ibm.com))
+* Bill Stout, ServiceNow ([bill.stout@servicenow.com](mailto:bill.stout@servicenow.com))
+* Moin Syed, Anthropic ([moin@anthropic.com](mailto:moin@anthropic.com))
+* Josiah Hagen, TrendMicro ([josiah_hagen@trendmicro.com](mailto:josiah_hagen@trendmicro.com))
+* Jonathan Whitson ([jonathan\_whitson@dell.com](mailto:jonathan_whitson@dell.com))  
 * Marina Zeldin, Dell ([marina.zeldin@dell.com](mailto:marina.zeldin@dell.com))  
-* Jonathan Whitson( [jonathan\_whitson@dell.com](mailto:jonathan_whitson@dell.com))  
+* Giulio Zizzo, IBM ([giulio.zizzo2@ibm.com](mailto:giulio.zizzo2@ibm.com))
 
 **Technical Steering Committee Co-Chairs**
 
-* Akila Srinivasan, Anthropic (akila@anthropic.com)  
-* J.R. Rao, IBM (jrrao@us.ibm.com)
+* Akila Srinivasan, Anthropic ([akila@anthropic.com](mailto:akila@anthropic.com))
+* J.R. Rao, IBM ([jrrao@us.ibm.com](mailto:jrrao@us.ibm.com))
 
 # 6. Appendix
 
