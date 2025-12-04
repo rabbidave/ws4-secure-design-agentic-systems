@@ -424,6 +424,7 @@ Organizations deploying MCP-based systems must develop defense-in-depth strategi
 * Michael Medeiros, Cisco ([mimedeir@cisco.com](mailto:mimedeir@cisco.com))
 * Grant Miller, IBM ([millerg@us.ibm.com](mailto:millerg@us.ibm.com))
 * David Pierce, PayPal ([davpierce@paypal.com](mailto:davpierce@paypal.com))
+* Shriti Priya, IBM ([shritip@ibm.com](mailto:shritip@ibm.com))
 * Xiaokui Shu, IBM ([xiaokui.shu@ibm.com](mailto:xiaokui.shu@ibm.com))
 * Bill Stout, ServiceNow ([bill.stout@servicenow.com](mailto:bill.stout@servicenow.com))
 * Moin Syed, Anthropic ([moin@anthropic.com](mailto:moin@anthropic.com))
