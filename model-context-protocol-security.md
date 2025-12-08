@@ -189,7 +189,7 @@ The broad applicability and diverse deployment models and supported transports r
 
 * **Tier 1 \- MCP Specific Threats (7 Threats)**: Novel risks and threats due to MCP’s architecture and design decisions.   
 * **Tier 2 \- MCP Contextualized Threats (8 Threats)**: known threats that manifest differently in MCP contexts or are amplified in MCP deployments  
-* **Tier 3 \- Conventional Threats (25 Threats)**: security threats are are broadly applicable or derive from legacy, infrastructure, or transport implementation decisions
+* **Tier 3 \- Conventional Threats (19 Threats)**: security threats are are broadly applicable or derive from legacy, infrastructure, or transport implementation decisions
 
 The table below organizes the threats by category and provides a mapping to controls and mitigations, discussed next.
 
