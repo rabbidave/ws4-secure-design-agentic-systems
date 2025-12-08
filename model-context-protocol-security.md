@@ -61,7 +61,7 @@ Since its emergence a year ago, MCP has rapidly established itself as the protoc
 
 This paper focuses on the security aspects of MCP implementations, covering:
 
-* Security analysis of [the latest](https://modelcontextprotocol.io/specification/2025-06-18) (2025-06-18) specification MCP transport and protocol layers  
+* Security analysis of [the June](https://modelcontextprotocol.io/specification/2025-06-18) (2025-06-18) and [latest]([https://modelcontextprotocol.io/specification/2025-11-25]) revised specification MCP transport and protocol layers
 * Threat modeling strategies for MCP-based agentic systems[^1]  
 * Supply chain security considerations for MCP servers and tools  
 * Identity and access management challenges in agentic architectures consuming MCP endpoints  
