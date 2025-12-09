@@ -24,7 +24,9 @@
       - [3.2.6 Cryptographic Verification of Resources](#326-cryptographic-verification-of-resources)
       - [3.2.7 Transport Layer Security](#327-transport-layer-security)
       - [3.2.8 Secure Tool and UX Design](#328-secure-tool-and-ux-design)
-      - [3.2.9 Lifecycle and Governance](#329-lifecycle-and-governance)
+      - [3.2.9 Human-in-the-loop](#329-human-in-the-loop)
+      - [3.2.10 Logging](#3210-logging)
+      - [3.2.11 Lifecycle and Governance](#3211-lifecycle-and-governance)
 - [4. Conclusion](#4-conclusion)
 - [5. Contributors and Acknowledgements](#5-contributors-and-acknowledgements)
 - [6. Appendix](#6-appendix)
@@ -205,8 +207,8 @@ The table below organizes the threats by category and provides a mapping to cont
 | [MCP-T8](#mcp-t8-network-bindingisolation-failures) | Network Binding/Isolation Failures | [6. Shadow MCP Servers](#shadow-mcp) | [10. Improper Multitenancy](#improper-multitenancy) | [31. Malicious Command Execution](#malicious-command-execution) </br> [32. Dependency/Update Attack](#dependency-update-attack) </br> [26. Unrestricted Network Access](#unrestricted-network) | [Network and Transport Security](#327-transport-layer-security) </br> [Sandboxing and Isolation](#325-sandboxing-and-isolation) |
 | [MCP-T9](#mcp-t9-trust-boundary-and-privilege-design-failures) | Trust Boundary and Privilege Design Failures | [7. Overreliance on the LLM](#overreliance) | [13. Consent/User Approval Fatigue](#user-fagitue) |  | [Secure tool design UX Design](#328-secure-tool-and-ux-design) |
 | [MCP-T10](#mcp-t10-resource-managementrate-limiting-absence) | Resource Management/Rate Limiting Absence |   | [14. Resource exhaustion and denial of wallet](#resource-exhaustion) | [33. Payload Limit/DoS](#payload-limit) | [Network and Transport Security](#327-transport-layer-security) |
-| [MCP-T11](#mcp-t11-supply-chain-and-lifecycle-security-failures) | Supply Chain and Lifecycle Security Failures | [6. Shadow MCP Servers](#shadow-mcp) |  | [25. Supply Chain Compromise](#supply-chain) | [Lifecycle Governance](#329-lifecycle-and-governance) |
-| [MCP-T12](#mcp-t12-insufficient-logging-monitoring-and-auditability) | Insufficient Logging, Monitoring, and Auditability |  | [15. Invisible Agent Activity](#invisible-agent) | [34. Lack of Observability](#lack-of-observability) | [Lifecycle Governance](#329-lifecycle-and-governance) |
+| [MCP-T11](#mcp-t11-supply-chain-and-lifecycle-security-failures) | Supply Chain and Lifecycle Security Failures | [6. Shadow MCP Servers](#shadow-mcp) |  | [25. Supply Chain Compromise](#supply-chain) | [Lifecycle Governance](#3211-lifecycle-and-governance) |
+| [MCP-T12](#mcp-t12-insufficient-logging-monitoring-and-auditability) | Insufficient Logging, Monitoring, and Auditability |  | [15. Invisible Agent Activity](#invisible-agent) | [34. Lack of Observability](#lack-of-observability) | [Logging](#3210-logging) <br /> [Lifecycle Governance](#3211-lifecycle-and-governance) |
 
 ### 3.1.1 MCP Specific
 
@@ -348,7 +350,20 @@ Each tool should have a single, clearly defined purpose with explicit boundaries
 
 Safe and secure execution should not rely solely on the human user, who may not understand the security implications of frequent security prompts and can easily become fatigued. Security-relevant messages and elicitations should be clear, indicating the implications of the request, and unambiguous what is being requested. 
 
-### 3.2.9 Lifecycle and Governance
+### 3.2.9 Human-in-the-loop
+
+There is the possibility that a large language model, legit or poisoned, decides to execute a tool in a dangerous way. MCP hosts and clients, in general, allow users to disable the confirmation prompt. There are two approaches organizations considering this risk unacceptable may implement to reduce its probability and impact:
+
+* enforce the use of MCP hosts and clients with a configuration that unprivileged users cannot change and that keeps the confirmation prompt enabled.
+* use [elicitation](https://modelcontextprotocol.io/specification/draft/client/elicitation) on the MCP server side to request the user confirmation of actions.
+
+### 3.2.10 Logging
+
+Implement at all layers (MCP host, client and server) the capability to store a log of what tools have been decided to use, with which parameters, and as a result of which prompt. Having a log of the decisions made is crucial in order to troubleshoot or perform forensics in case of a security event.
+
+Leverage the use of centralization tools like MCP gateways or proxies, for example, between the MCP clients and the MCP servers, to centralize there key functionality (e.g. logging) and avoid the need to implement it on each component.
+
+### 3.2.11 Lifecycle and Governance
 
 Organizations must: 
 
@@ -414,6 +429,7 @@ Organizations deploying MCP-based systems must develop defense-in-depth strategi
 
 * Shrey Bagga, Cisco ([sbagga@cisco.com](mailto:sbagga@cisco.com))
 * Damian Bogel, Google ([kele@google.com](mailto:kele@google.com))
+* Florencio Cano, Red Hat ([fcanogab@redhat.com](mailto:fcanogab@redhat.com))
 * John Cavanaugh, ProCap360 ([johncavanaugh@procap360.com](mailto:johncavanaugh@procap360.com))  
 * Jason Clinton, Anthropic ([j@anthropic.com](mailto:j@anthropic.com))
 * Andre Elizondo, Wiz ([andre.elizondo@wiz.io](mailto:andre.elizondo@wiz.io))
