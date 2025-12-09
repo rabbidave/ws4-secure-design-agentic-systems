@@ -57,13 +57,13 @@
 
 # Abstract
 
-Since its emergence a year ago, MCP has rapidly established itself as the protocol for transmitting structured context between AI agents and services. Given the growing importance and attack surface of MCP and agentic systems, it is imperative that deployment specific security threats are identified and improvements are made to address the challenges and ambiguities inherent in MCP implementations. Our primary goal is to share actionable security guidance for today's MCP implementations while identifying areas where the protocol and ecosystem may need to evolve to address emerging threats. We introduce short and medium-term security implications related to MCP through the introduction of twelve core threat categories and almost forty threats. Our taxonomy distinguishes between traditional security threats amplified by AI and MCP, and novel attack vectors. For each threat and category, we propose mitigations, defenses, and best practices for using MCP across multiple deployment scenarios including enterprise use cases. .
+Since its emergence a year ago, MCP has rapidly established itself as the protocol for transmitting structured context between AI agents and services. Given the growing importance and attack surface of MCP and agentic systems, it is imperative that deployment specific security threats are identified and improvements are made to address the challenges and ambiguities inherent in MCP implementations. Our primary goal is to share actionable security guidance for today's MCP implementations while identifying areas where the protocol and ecosystem may need to evolve to address emerging threats. We introduce short and medium-term security implications related to MCP through the introduction of twelve core threat categories and almost forty threats. Our taxonomy distinguishes between traditional security threats amplified by AI and MCP, and novel attack vectors. For each threat and category, we propose mitigations, defenses, and best practices for using MCP across multiple deployment scenarios including enterprise use cases. Multiple critical CVEs have been reported and incidents such as data leakage have already occurred across MCP/agentic deployments. Several examples are mentioned with links in section 2.1.
 
 ## Scope
 
 This paper focuses on the security aspects of MCP implementations, covering:
 
-* Security analysis of [the latest](https://modelcontextprotocol.io/specification/2025-06-18) (2025-06-18) specification MCP transport and protocol layers  
+* Security analysis of [the June](https://modelcontextprotocol.io/specification/2025-06-18) (2025-06-18) and [latest]([https://modelcontextprotocol.io/specification/2025-11-25]) revised specification MCP transport and protocol layers
 * Threat modeling strategies for MCP-based agentic systems[^1]  
 * Supply chain security considerations for MCP servers and tools  
 * Identity and access management challenges in agentic architectures consuming MCP endpoints  
@@ -191,7 +191,7 @@ The broad applicability and diverse deployment models and supported transports r
 
 * **Tier 1 \- MCP Specific Threats (7 Threats)**: Novel risks and threats due to MCP’s architecture and design decisions.   
 * **Tier 2 \- MCP Contextualized Threats (8 Threats)**: known threats that manifest differently in MCP contexts or are amplified in MCP deployments  
-* **Tier 3 \- Conventional Threats (25 Threats)**: security threats are are broadly applicable or derive from legacy, infrastructure, or transport implementation decisions
+* **Tier 3 \- Conventional Threats (19 Threats)**: security threats are are broadly applicable or derive from legacy, infrastructure, or transport implementation decisions
 
 The table below organizes the threats by category and provides a mapping to controls and mitigations, discussed next.
 
@@ -414,30 +414,45 @@ Organizations deploying MCP-based systems must develop defense-in-depth strategi
 
 **Workstream Leads**
 
-* Sarah Novotny, (sarah.novotny@gmail.com)  
+* Sarah Novotny, ([sarah.novotny@gmail.com](mailto:sarah.novotny@gmail.com))
 * Ian Molloy, IBM ([molloyim@us.ibm.com](mailto:molloyim@us.ibm.com))  
-* Raghu Yeluri, Intel (raghuram.yeluri@intel.com)  
-* Alex Polyakov, Adversa AI (alex@adversa.ai)
+* Raghu Yeluri, Intel ([raghuram.yeluri@intel.com](mailto:raghuram.yeluri@intel.com))
+* Alex Polyakov, Adversa AI ([alex@adversa.ai](mailto:alex@adversa.ai))
 
 **Editors**
 
-* Daniel Rohrer, NVIDIA (drohrer@nvidia.com)  
+* Daniel Rohrer, NVIDIA ([drohrer@nvidia.com](mailto:drohrer@nvidia.com))
 * Jenn Newton, Anthropic ([jenn@anthropic.com](mailto:jenn@anthropic.com))  
-* David LaBianca, Google (ddlb@google.com)  
-* Shrey Bagga, Cisco(sbagga@cisco.com)
+* David LaBianca, Google ([ddlb@google.com](mailto:ddlb@google.com))
 
 **Contributors**
 
-* John Cavanaugh, ProCap360 ([johncavanaugh@procap360.com](mailto:johncavanaugh@procap360.com) )  
-* Chooi Low, Dell ( [Chooi.Low@dell.com](mailto:Chooi.Low@dell.com))  
-* Marina Zeldin, Dell ([marina.zeldin@dell.com](mailto:marina.zeldin@dell.com))  
-* Jonathan Whitson( [jonathan\_whitson@dell.com](mailto:jonathan_whitson@dell.com))  
+* Shrey Bagga, Cisco ([sbagga@cisco.com](mailto:sbagga@cisco.com))
+* Damian Bogel, Google ([kele@google.com](mailto:kele@google.com))
 * Florencio Cano, Red Hat ([fcanogab@redhat.com](mailto:fcanogab@redhat.com))
+* John Cavanaugh, ProCap360 ([johncavanaugh@procap360.com](mailto:johncavanaugh@procap360.com))  
+* Jason Clinton, Anthropic ([j@anthropic.com](mailto:j@anthropic.com))
+* Andre Elizondo, Wiz ([andre.elizondo@wiz.io](mailto:andre.elizondo@wiz.io))
+* Riggs Goodman III, Amazon ([goriggs@amazon.com](mailto:goriggs@amazon.com))
+* Hani Jamjoom, IBM ([jamjoom@us.ibm.com](mailto:jamjoom@us.ibm.com))
+* Chooi Low, Dell ([Chooi.Low@dell.com](mailto:Chooi.Low@dell.com))
+* Victor Lu ([victorjunlu@gmail.com](mailto:victorjunlu@gmail.com))
+* Michael Medeiros, Cisco ([mimedeir@cisco.com](mailto:mimedeir@cisco.com))
+* Grant Miller, IBM ([millerg@us.ibm.com](mailto:millerg@us.ibm.com))
+* David Pierce, PayPal ([davpierce@paypal.com](mailto:davpierce@paypal.com))
+* Shriti Priya, IBM ([shritip@ibm.com](mailto:shritip@ibm.com))
+* Xiaokui Shu, IBM ([xiaokui.shu@ibm.com](mailto:xiaokui.shu@ibm.com))
+* Bill Stout, ServiceNow ([bill.stout@servicenow.com](mailto:bill.stout@servicenow.com))
+* Moin Syed, Anthropic ([moin@anthropic.com](mailto:moin@anthropic.com))
+* Josiah Hagen, TrendMicro ([josiah_hagen@trendmicro.com](mailto:josiah_hagen@trendmicro.com))
+* Jonathan Whitson ([jonathan\_whitson@dell.com](mailto:jonathan_whitson@dell.com))  
+* Marina Zeldin, Dell ([marina.zeldin@dell.com](mailto:marina.zeldin@dell.com))  
+* Giulio Zizzo, IBM ([giulio.zizzo2@ibm.com](mailto:giulio.zizzo2@ibm.com))
 
 **Technical Steering Committee Co-Chairs**
 
-* Akila Srinivasan, Anthropic (akila@anthropic.com)  
-* J.R. Rao, IBM (jrrao@us.ibm.com)
+* Akila Srinivasan, Anthropic ([akila@anthropic.com](mailto:akila@anthropic.com))
+* J.R. Rao, IBM ([jrrao@us.ibm.com](mailto:jrrao@us.ibm.com))
 
 # 6. Appendix
 
