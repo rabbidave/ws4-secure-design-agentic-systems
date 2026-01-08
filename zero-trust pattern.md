@@ -305,6 +305,33 @@ When all axioms are satisfied:
 - [RFC 9449 - OAuth 2.0 DPoP](https://datatracker.ietf.org/doc/html/rfc9449)
 - [RFC 9396 - OAuth 2.0 RAR](https://datatracker.ietf.org/doc/html/rfc9396)
 
+---
+
+## Appendix A: Six Cryptographic Invariants
+
+| # | Invariant | Assertion | Tier |
+|---|-----------|-----------|------|
+| 1 | **Identity-Tool Binding** | `token.sub == user.id AND token.tool == request.tool` | 1 |
+| 2 | **Temporal Validity** | `now() < token.exp AND now() >= token.nbf` | 1 |
+| 3 | **Parameter Integrity** | `sha256(actualParams) == token.parameters_hash` | 1 |
+| 4 | **Atomic Consumption** | `atomicStore.compareAndSet(jti, null, "consumed")` | 1 |
+| 5 | **Transport Binding (DPoP)** | `verify(dpopProof) AND sha256(token) == ath` | 2 |
+| 6 | **Client Signature (Enhanced)** | `verify(invocationSignature, clientPublicKey)` | 3 |
+
+**Invariant 3 is the critical differentiator.** Traditional OAuth validates identity; this standard validates intent.
+
+### Invariant Dependency Graph
+
+```
+Tier 1 (Required)          Tier 2 (Enhanced)       Tier 3 (Maximum)
+─────────────────          ─────────────────       ────────────────
+[1] Identity-Tool ─┐
+[2] Temporal      ─┼──→ [5] Transport (DPoP) ──→ [6] Client Signature
+[3] Parameter     ─┤
+[4] Atomic        ─┘
+```
+
+Tier 1 invariants are mandatory for all implementations. Tier 2+ are additive based on data classification.
 ```mermaid
 graph TD
     subgraph "Interdiction Layer"
