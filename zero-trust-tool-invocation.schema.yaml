@@ -1,0 +1,221 @@
+# Zero-Trust Tool Invocation - CoSAI-RM Schema
+# Version: 1.2.0
+
+metadata:
+  name: zero-trust-tool-invocation
+  version: "1.2.0"
+  status: draft
+  framework_mappings:
+    - cosai-rm
+    - mitre-atlas
+    - owasp-llm-top10
+    - nist-ai-rmf
+    - stride
+
+axioms:
+  - id: AXIOM-1
+    name: Parameter Integrity
+    expression: "H(approved_params) == H(executed_params)"
+    description: Hash of approved parameters must equal hash of executed parameters
+    
+  - id: AXIOM-2
+    name: Atomic Consumption
+    expression: "consume(token.jti) → {success: once, failure: always}"
+    description: Authorization token consumable exactly once
+    
+  - id: AXIOM-3
+    name: Temporal Binding
+    expression: "now() ∈ [token.nbf, token.exp]"
+    description: Authorization valid only within defined temporal window
+    default_ttl_seconds: 30
+    
+  - id: AXIOM-4
+    name: Identity Binding
+    expression: "token.sub == user.id ∧ token.tool == tool.name"
+    description: Token binds specific identity to specific tool
+    
+  - id: AXIOM-5
+    name: Hash Provenance
+    expression: "H(params) := ad-hoc | pre-defined"
+    description: Hash may originate client-side or server-side
+    modes:
+      - ad-hoc: Client-generated at user approval (MCP model)
+      - pre-defined: Server-generated at mandate definition (AP2 model)
+      - hybrid: Server schema + client values
+
+components:
+  - id: COMP-01
+    name: Identity Provider
+    description: OAuth 2.x / OIDC issuer
+    security_role: Authenticates WHO
+    
+  - id: COMP-02
+    name: Authorization Service
+    description: Token generation with parameter binding
+    security_role: Binds WHAT to WHO
+    
+  - id: COMP-03
+    name: Atomic State Store
+    description: Redis, etcd, DynamoDB with atomic operations
+    security_role: Enforces single-use (AXIOM-2)
+    
+  - id: COMP-04
+    name: Validation Gateway
+    description: Hash verification, temporal checks
+    security_role: Enforces AXIOM-1, AXIOM-3, AXIOM-4
+    
+  - id: COMP-05
+    name: Tool Endpoint
+    description: Target execution environment
+    security_role: Executes only validated requests
+
+risks:
+  - id: RISK-01
+    name: Parameter Tampering
+    atlas_id: AML.T0048
+    owasp_llm: LLM04
+    stride: Tampering
+    description: Agent or MITM modifies parameters between approval and execution
+    control: AXIOM-1
+    
+  - id: RISK-02
+    name: Replay Attack
+    atlas_id: AML.T0040
+    stride: Spoofing
+    description: Captured token reused for unauthorized execution
+    controls: [AXIOM-2, AXIOM-3]
+    
+  - id: RISK-03
+    name: Agent Misinterpretation
+    owasp_llm: LLM04
+    description: LLM regenerates different parameters than user intended
+    control: AXIOM-1
+    
+  - id: RISK-04
+    name: Privilege Escalation
+    stride: Elevation of Privilege
+    description: Token used for unintended tool or scope
+    control: AXIOM-4
+    
+  - id: RISK-05
+    name: Session Hijacking
+    atlas_id: AML.T0024
+    stride: Spoofing
+    description: Long-lived token stolen and misused
+    controls: [AXIOM-3]
+    optional_enhancement: DPoP transport binding
+
+controls:
+  - id: CTRL-01
+    name: Hash Binding
+    implements: AXIOM-1
+    tier: 1
+    description: Validate H(request.params) == token.parameters_hash
+    
+  - id: CTRL-02
+    name: Atomic JTI Consumption
+    implements: AXIOM-2
+    tier: 1
+    description: Single-use token via atomic store operation
+    
+  - id: CTRL-03
+    name: Temporal Validation
+    implements: AXIOM-3
+    tier: 1
+    description: Verify token within validity window
+    
+  - id: CTRL-04
+    name: Identity-Tool Binding
+    implements: AXIOM-4
+    tier: 1
+    description: Verify token.sub and token.tool match request
+    
+  - id: CTRL-05
+    name: DPoP Transport Binding
+    implements: Transport Security
+    tier: 2
+    description: Bind token to TLS session via proof-of-possession
+    optional: true
+    
+  - id: CTRL-06
+    name: Client Pre-Signing
+    implements: Non-repudiation
+    tier: 3
+    description: Client signs complete invocation
+    optional: true
+
+tiers:
+  - level: 1
+    name: Minimum Viable
+    classification: [4, 5]
+    required_controls: [CTRL-01, CTRL-02, CTRL-03, CTRL-04]
+    
+  - level: 2
+    name: Enhanced
+    classification: [2, 3]
+    required_controls: [CTRL-01, CTRL-02, CTRL-03, CTRL-04, CTRL-05]
+    
+  - level: 3
+    name: Maximum
+    classification: [1]
+    required_controls: [CTRL-01, CTRL-02, CTRL-03, CTRL-04, CTRL-05, CTRL-06]
+
+validation_sequence:
+  - step: 1
+    action: VERIFY token signature
+  - step: 2
+    action: ASSERT token.sub == authenticated_user.id
+    axiom: AXIOM-4
+  - step: 3
+    action: ASSERT token.tool == requested_tool
+    axiom: AXIOM-4
+  - step: 4
+    action: ASSERT now() < token.exp
+    axiom: AXIOM-3
+  - step: 5
+    action: ASSERT H(request.params) == token.parameters_hash
+    axiom: AXIOM-1
+    critical: true
+  - step: 6
+    action: ASSERT atomic_consume(token.jti) == success
+    axiom: AXIOM-2
+  - step: 7
+    action: IF dpop_present THEN VERIFY dpop_proof
+    optional: true
+  - step: 8
+    action: EXECUTE tool(params)
+  - step: 9
+    action: LOG transaction
+
+framework_mappings:
+  mitre_atlas:
+    - id: AML.T0024
+      name: Session Hijacking
+      risks: [RISK-05]
+    - id: AML.T0040
+      name: Replay Attack
+      risks: [RISK-02]
+    - id: AML.T0048
+      name: Data Manipulation
+      risks: [RISK-01]
+      
+  owasp_llm_top10:
+    - id: LLM04
+      name: Model Denial of Service / Prompt Injection
+      risks: [RISK-01, RISK-03]
+    - id: LLM06
+      name: Sensitive Information Disclosure
+      controls: [CTRL-01]
+    - id: LLM08
+      name: Excessive Agency
+      controls: [CTRL-04]
+      
+  stride:
+    - category: Spoofing
+      risks: [RISK-02, RISK-05]
+    - category: Tampering
+      risks: [RISK-01]
+    - category: Repudiation
+      controls: [CTRL-06]
+    - category: Elevation of Privilege
+      risks: [RISK-04]
