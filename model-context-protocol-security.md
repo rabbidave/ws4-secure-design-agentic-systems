@@ -1,5 +1,7 @@
 # Model Context Protocol (MCP) Security
 
+Approved by the CoSAI Project Governing Board on 8 January 2026.
+
 # Table of contents
   - [Abstract](#abstract)
     - [Scope](#scope)
