@@ -1,8 +1,17 @@
+---
+title: Artifact Integrity Maturity Model
+nav_order: 2
+parent: Standards
+has_toc: true
+---
+
 # Artifact Integrity Maturity Model
 ## Progressive Security for AI Artifact Provenance
 
 **Version:** 1.0.0  
 **Status:** Draft  
+**Authors:** David Pierce, MPA  
+**Last Updated:** 2025-01-22  
 **Framework Alignment:** CoSAI-RM, MITRE ATLAS, OWASP LLM Top 10, SLSA, in-toto
 
 ---
@@ -58,7 +67,7 @@ flowchart LR
 | INV-L1-01 | **Measured** | `H(artifact_content) == integrity.digest` | ✓ |
 | INV-L1-02 | **Produced By** | `signature.signer == claimed_producer` | ✓ |
 | INV-L1-03 | **Signer Verified** | `signer.subject ∈ trust_store` | ✓ |
-| INV-L1-04 | **Timestamped** | `\|now() - signed_at\| < tolerance` | ○ |
+| INV-L1-04 | **Timestamped** | `|now() - signed_at| < tolerance` | ○ |
 
 **Formal Claims:**
 ```
@@ -75,7 +84,7 @@ SIGNER A verified against trust_store
 | INV-L2-02 | **Input Verified** | `∀ input: H(input) == original_digest` | ✓ |
 | INV-L2-03 | **Evidence Backed** | `derivation_claim.evidence EXISTS` | ○ |
 | INV-L2-04 | **Chain Linked** | `H(prev.sig) == chain_signature.prev_hash` | ✓ |
-| INV-L2-05 | **Timestamped (Strict)** | `\|now() - signed_at\| < 60s` | ✓ |
+| INV-L2-05 | **Timestamped (Strict)** | `|now() - signed_at| < 60s` | ✓ |
 
 **Formal Claims:**
 ```
@@ -425,7 +434,7 @@ When all invariants for a level are satisfied:
 
 ---
 
-## Appendix: Claim Progression Summary
+## Appendix A: Claim Progression Summary
 
 ```
 LEVEL 1 (Basic Integrity)
@@ -448,6 +457,25 @@ LEVEL 3 (Attestations + Policy) — Inherits Level 2
 ├── POLICY_EVALUATED: OPA result with rule details
 └── ADMISSION_GATED: Explicit admission decision (conditional)
 ```
+
+---
+
+## Appendix B: Relationship to Zero-Trust Tool Invocation
+
+This maturity model complements the Zero-Trust Tool Invocation standard:
+
+| Concern | Zero-Trust Tool Invocation | Artifact Integrity Maturity |
+|---------|---------------------------|----------------------------|
+| **Focus** | Runtime authorization | Artifact provenance |
+| **Time** | Point-in-time execution | Lifecycle tracking |
+| **Binding** | Identity → Tool → Parameters | Producer → Artifact → Lineage |
+| **Key Invariant** | Parameter hash at execution | Content hash at creation |
+| **Integration** | Level 2+ operations may require artifact verification before tool authorization |
+
+When deploying Class 1-3 operations that involve AI artifacts:
+1. Verify artifact integrity per this maturity model
+2. Authorize tool invocation per Zero-Trust standard
+3. Execute with both proofs in audit trail
 
 ---
 
