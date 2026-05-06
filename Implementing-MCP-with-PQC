@@ -1,0 +1,145 @@
+# **White Paper: Quantum-Resistant AI Infrastructure**
+
+## **Implementing Post-Quantum Cryptography (PQC) in Model Context Protocol (MCP) Architectures**
+
+## ---
+
+**Executive Summary**
+
+As the Model Context Protocol (MCP) becomes the standard for connecting LLMs to enterprise data, it introduces new cryptographic risks. The advent of functionally relevant quantum computing threatens the asymmetric encryption (RSA, ECC) currently securing these data pipes. This paper outlines the design and implementation of a **Quantum-Resistant MCP Server**, specifically focusing on protecting "Long-Lived Data" against "Harvest Now, Decrypt Later" (HNDL) attacks.
+
+## ---
+
+**1\. Information Classification & The "Ten-Year Rule"**
+
+To prioritize cryptographic agility, organizations must classify data based on its **Value Longevity**.
+
+### **1.1 Data Classification Definitions**
+
+* **Ephemeral Data (\<1 Year):** Session tokens, transient climate data, or stock tickers. Classical encryption is often sufficient.  
+* **Standard Business Data (1–10 Years):** Contractual details, internal strategy, or project roadmaps.  
+* **Long-Lived Data (10+ Years):** Data that remains sensitive or identifying for decades. If intercepted today, it remains a liability in the quantum era.
+
+### **1.2 "Long-Lived" Data Types**
+
+Specific focus is required for data that cannot be changed if compromised:
+
+* **Biometric Markers:** DNA sequences, high-resolution fingerprints, and retinal scans.  
+* **Identity Roots:** Social Security numbers, birth records, and heritage data.  
+* **National Security:** Cryptographic root keys and long-term classified intelligence.
+
+## ---
+
+**2\. Background: The Quantum Threat to MCP**
+
+MCP servers typically communicate via **SSE (Server-Sent Events)** over HTTPS or **STDIO** for local processes. While HTTPS (TLS 1.2/1.3) is currently secure, the key exchange mechanism (Diffie-Hellman or Elliptic Curve) is vulnerable to Shor's Algorithm. An adversary capturing MCP traffic today can store it and decrypt it once a quantum computer is available, compromising the long-lived data fed to the AI.
+
+### **Current Design Status**
+
+As of 2026, the industry is transitioning to **NIST FIPS 203 (ML-KEM)** and **FIPS 204 (ML-DSA)**. Hybrid key exchanges—which combine a classical key with a quantum-resistant one—are the current "Gold Standard" for MCP implementation. The National Security Agency (NSA) has established a phased timeline for National Security Systems (NSS) to transition to Commercial National Security Algorithm Suite 2.0 (CNSA 2.0). 
+* January 1, 2027: The Procurement Inflection Point
+    Any NSS system acquired or deployed after this date must support CNSA 2.0 algorithms (ML-KEM and ML-DSA). This impacts current RFP and planning cycles, as systems designed today will likely be delivered after this cutoff.
+* January 2, 2030: TLS 1.3 (or successor) mandated across all federal systems (EO 14144).
+* December 31, 2030: Deadline for phasing out systems unable to support CNSA 2.0 (legacy systems).
+* December 31, 2033: Final System Deadline
+    All custom applications and legacy infrastructure are expected to reach exclusive use of CNSA 2.0 standards.
+* 2035: Full Quantum ResistanceThe ultimate deadline set by National Security Memorandum 10 (NSM-10) for complete migration across all federal national security systems.
+
+Commercial & Commercial Cloud (AWS, Azure, GCP) Milestones:
+ * 2025–2026: Hybrid PQC (combining classical and post-quantum) is currently being deployed by major CSPs.2025: Major cloud providers (e.g., AWS KMS) and web browsers aimed for PQC support in web services.
+ * 2029: Targeted by major tech firms like Google and Cloudflare for full, non-hybrid post-quantum security implementation.
+    Critical Infrastructure: Expected to comply with PQC regulations by 2026–2028.Hybrid Support: While hybrid implementations are a transitional step in 2025-2026, they do not satisfy long-term (2030+) requirements
+
+## ---
+
+**3\. Design Architecture: The PQC-MCP Server**
+
+The proposed design utilizes a **Hybrid KEM (Key Encapsulation Mechanism)** approach. This ensures that even if the PQC algorithm is later found to have a flaw, the classical encryption still provides a baseline level of security.
+
+### **3.1 Core Components**
+
+* **Transport:** TLS 1.3 with Hybrid Key Exchange (X25519 \+ ML-KEM-768).  
+* **Authentication:** Digital signatures using ML-DSA.  
+* **Payload:** Standard JSON-RPC 2.0.
+
+## ---
+
+**4\. Build & Implementation (Code-Level)**
+
+This implementation uses **Python** and the **OQS (Open Quantum Safe)** library to wrap a standard MCP server.
+
+### **4.1 Environment Setup**
+
+Bash
+
+pip install mcp liboqs-python
+
+### **4.2 Implementing a PQC-Enabled MCP Server**
+
+The following example demonstrates an MCP server that handles "Long-Lived" biometric data (Fingerprint templates) using a quantum-safe wrapper.
+
+Python
+
+from mcp.server import Server  
+import oqs \# Open Quantum Safe library  
+import json
+
+\# Initialize MCP Server  
+app \= Server("PQC-Secure-Biometric-Vault")
+
+\# 1\. Setup Quantum-Safe Key Encapsulation (ML-KEM-768)  
+kem\_name \= "ML-KEM-768"
+
+@app.tool()  
+async def store\_long\_lived\_data(data\_type: str, encrypted\_payload: str):  
+    """  
+    Handles storage of data types lasting \>10 years.  
+    Expects payload already wrapped in a PQC envelope.  
+    """  
+    if data\_type in \["dna", "fingerprint", "ssn"\]:  
+        \# Logic to store in a Post-Quantum hardened database  
+        return {"status": "success", "security": "ML-KEM-768 protected"}  
+    return {"status": "rejected", "reason": "Insufficient classification"}
+
+@app.resource("vault://biometrics/{user\_id}")  
+async def get\_biometric(user\_id: str):  
+    \# ML-DSA Signature verification logic here  
+    return "Fingerprint\_Template\_PQC\_Encrypted\_Blob"
+
+if \_\_name\_\_ \== "\_\_main\_\_":  
+    app.run\_stdio()
+
+### **4.3 Client-Side Hybrid Handshake (Conceptual)**
+
+To truly secure the transport, the client must initiate a hybrid handshake. Using a PQC-compatible library like BoringSSL:
+
+C
+
+// Setting TLS groups to include ML-KEM  
+SSL\_CTX\_set1\_groups\_list(ctx, "X25519Kyber768Draft00:X25519");
+
+## ---
+
+**5\. Implementation Roadmap**
+
+1. **Inventory:** Identify all MCP resources handling DNA, fingerprints, or identity data.  
+2. **Agility Layer:** Deploy an MCP Proxy that supports TLS 1.3 Hybrid modes.   All HTTPS should use hybrid post-quantum TLS **X25519MLKEM768** — the hybrid key exchange that combines classical X25519 with NIST FIPS 203 ML-KEM-768. The handshake is protected as long as either component holds, so the system survives either a quantum attacker or a flaw in the new PQ algorithm
+ 
+3. **Signature Migration:** Transition from RSA/ECDSA to ML-DSA for server identity.  Note that many third party carry their own classical TLS configurations. Vendor PQ rollout is the only path forward for these. Track their respective release notes.
+
+
+4. **Audit:** Ensure "Long-Lived Data" is encrypted at rest using AES-256 (which remains quantum-resistant).
+
+## ---
+
+**6\. Conclusion**
+
+The Model Context Protocol is the gateway to enterprise intelligence. By classifying information based on its lifespan and implementing **ML-KEM** and **ML-DSA**, organizations can ensure that today's AI interactions do not become tomorrow's data breaches. For data lasting over 10 years, PQC is no longer optional—it is a functional requirement.
+
+TODOs
+
+
+
+1 \- add CoSAI license terms, contributors and other boilerplate sections
+
+2 \- add upcoming NIST algos that may be more efficient for small data transmission
