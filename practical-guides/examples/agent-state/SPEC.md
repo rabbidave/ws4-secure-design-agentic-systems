@@ -11,6 +11,16 @@
 
 That distinction is why this event lives in the OCSF **Discovery** category next to `Device Inventory Info [5001]`, `User Inventory Info [5003]`, `Software Inventory Info [5020]`, `Cloud Resources Inventory Info [5023]` — and explicitly **not** in `API Activity [6003]` (Application Activity, Category 6). Forcing `agent-state` into API Activity would require manufacturing an actor, an action, and an authorization outcome none of which the model's forward pass actually produces.
 
+### 1.1 Continuity: two chains, one mechanism
+
+`agent-state` ships one record type today, `Agent Inventory Info [5050]`, this spec. A second is proposed and tracked separately: `Agent Tool Activity`, an Application Activity-category class for the T12 audit-log gap (which tool was invoked, with what argument digest, in what session — see [cosai-oasis/ws4-secure-design-agentic-systems#155](https://github.com/cosai-oasis/ws4-secure-design-agentic-systems/issues/155)). Inventory and Activity answer different questions (§2.1) and neither substitutes for the other. But they are not two different trust models bolted together — both chain the same way, and both have to clear the same three portability axes before either is trustworthy:
+
+- **Implementation-agnostic.** The hashing boundary sits beneath the engine, not inside it. vLLM's `LLMEngine.step()` and llama.cpp's `llama_decode()` are the two boundaries this spec hooks today (§6). A third engine gets the same treatment by finding its own per-forward-pass primitive, not by special-casing the hash. An activity record would hook the engine's tool-dispatch boundary the same way.
+- **Protocol-agnostic.** The hash is drawn beneath the wire envelope, not the transport that carried it there. `ToolInventory.from_schemas()` hashes the unwrapped tool definition, whether it arrived as an MCP `tools/list` JSON-RPC frame, an OpenAI/Anthropic function-calling payload, or an A2A agent card. An activity record would draw the same boundary beneath whichever transport reports the invocation.
+- **Environment-agnostic.** `core.py` has zero third-party dependencies (`hashlib`, `json`, `dataclasses`, stdlib only). Canonical bytes are identical whether recomputed on a GPU cluster, a laptop, or an edge device, so a verifier's result doesn't depend on where it verifies.
+
+An inventory chain that fails any of these three is a convenience log with an OCSF label on it, not an attestation. The activity chain, once it exists, inherits `core._canonical_bytes`/`_sha256_hex` and the chain-by-prior-hash pattern (§5) rather than a parallel mechanism that happens to look similar — same portability guarantees, applied to a different event shape.
+
 ## 2. OCSF mapping — `Agent Inventory Info [5050]`
 
 Proposed new class under **Category 5 (Discovery)**. UID `5050` is the next free slot in the standard 50xx Discovery range (5040, the live-evidence class, is currently the highest in active use).
