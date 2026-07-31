@@ -1,0 +1,55 @@
+%% Agent Inventory Info -- per-forward-pass emission diagrams.
+%% Tufte principles applied: every label earns its pixels; no decorative
+%% classDef colors; no boxes inside boxes inside boxes. The verbs in
+%% present tense describe what is happening at each arrow's tail;
+%% what follows the verb is the actual identifier from the codebase.
+
+flowchart LR
+
+  subgraph D1["1. Forward-pass boundary -- only two emit sites"]
+    direction LR
+    caller["application calls LLM.generate / Llama.create_chat_completion"]
+    vllmStep["AgentStateVLLMEngine.step"]
+    vllmInner["vllm.LLMEngine.step -- one scheduler tick"]
+    llamaDecode["AgentStateLlamaCpp patched llama_decode"]
+    llamaInner["llama_decode -- C-level forward pass"]
+    emitted["AgentStateChain.record fires"]
+
+    caller -->|adds request, caches tools| vllmStep
+    vllmStep -->|"snapshot scheduler.running, then"| vllmInner
+    vllmInner -->|after decode returns| emitted
+
+    caller -->|binds tools via contextvar| llamaDecode
+    llamaDecode -->|"reads ContextVar, then"| llamaInner
+    llamaInner -->|after decode returns| emitted
+  end
+
+  subgraph D2["2. Record assembly -- dataflow into inventory_hash"]
+    direction LR
+    snap["snapshot running batch + token ids"]
+    toolCache["read per-request tool schema cache"]
+    ctxBuild["ContextInventory.build tokens + sampling + loras"]
+    canon["core._canonical_bytes payload_for_hash"]
+    sha["core._sha256_hex prior || canonical"]
+    chainTip["AgentStateChain._last_hash"]
+    append["AgentStateInventory appended; on_record fires"]
+
+    snap --> toolCache --> ctxBuild --> canon --> sha
+    chainTip -. prior_inventory_hash .-> sha
+    sha -->|inventory_hash| chainTip
+    sha --> append
+  end
+
+  subgraph D3["3. Sink fan-out -- one record, three projections"]
+    direction LR
+    rec["AgentStateInventory finalized"]
+    ocsf["ocsf_mapping.to_ocsf_event -- Agent Inventory Info 5050 Fingerprint objects"]
+    otelSpan["otel_bridge span.add_event agent.state.inventoried"]
+    otelLog["otel_bridge logger.info event.name = agent.state.inventoried"]
+    chainLog["AgentStateChain.records in-process verify on replay"]
+
+    rec --> ocsf
+    rec --> otelSpan
+    rec --> otelLog
+    rec --> chainLog
+  end
