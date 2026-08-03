@@ -26,6 +26,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from core import (
+    AgentIdentity,
     AgentStateChain,
     ContextInventory,
     EngineIdentity,
@@ -127,7 +128,13 @@ def main() -> int:
     print("agent-state demo -- 3 forward passes, tamper-evidence check")
     print("=" * 72)
 
-    chain = AgentStateChain(session_uid="demo-sess-001")
+    agent = AgentIdentity(
+        uid="spiffe://trust.example/agent/demo-agent",
+        instance_uid="demo-sess-001",
+        session_token="demo.session.token-not-a-real-jwt",
+        version="1.0.0",
+    )
+    chain = AgentStateChain(agent=agent)
     span = CapturingSpan()
     bridge = AgentStateOTelBridge(chain)
     emitted_otel: list[dict[str, Any]] = []
@@ -235,6 +242,21 @@ def main() -> int:
     assert tools_fp and tools_fp["algorithm_id"] == 3
     ctx_fp = ocsf_event["context"]["context_fingerprint"]
     assert ctx_fp and ctx_fp["algorithm_id"] == 3
+
+    # Agent identity: real OCSF ai_agent object, and the bearer token must
+    # never leak into the emitted event -- only its fingerprint should.
+    ai_agent = ocsf_event["ai_agent"]
+    assert ai_agent["uid"] == agent.uid
+    assert ai_agent["instance_uid"] == agent.instance_uid == "demo-sess-001"
+    assert ai_agent["version"] == "1.0.0"
+    assert ai_agent["token_fingerprint"]["value"] == agent.token_fingerprint()
+    assert "session_token" not in json.dumps(ocsf_event), (
+        "raw session_token leaked into the OCSF event"
+    )
+    print(f"\n[7] ai_agent.uid={ai_agent['uid']} "
+          f"instance_uid={ai_agent['instance_uid']} "
+          f"token_fingerprint={ai_agent['token_fingerprint']['value'][:16]}.. "
+          "(raw token confirmed absent from event)")
 
     print("\n" + "=" * 72)
     print("all assertions passed; demo OK")

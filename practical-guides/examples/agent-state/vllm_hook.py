@@ -35,7 +35,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from core import AgentStateChain, EngineIdentity, ToolInventory, ContextInventory, _canonical_bytes
+from core import AgentStateChain, AgentIdentity, EngineIdentity, ToolInventory, ContextInventory, _canonical_bytes
 
 
 class AgentStateVLLMEngine:
@@ -44,21 +44,28 @@ class AgentStateVLLMEngine:
     directly:
 
         from vllm import LLMEngine, EngineArgs
+        from core import AgentIdentity
+
         raw_engine = LLMEngine.from_engine_args(EngineArgs(model="..."))
-        engine = AgentStateVLLMEngine(raw_engine, session_uid="sess-abc123")
+        engine = AgentStateVLLMEngine(raw_engine, agent=AgentIdentity(
+            uid="spiffe://trust.example/agent/payments-processor",  # stable, from your IdP/control plane
+            instance_uid="sess-abc123",                              # this session/run
+            session_token=oauth_session_token,                       # bearer token backing this session; see SPEC.md §2.7
+        ))
 
         engine.add_request(request_id, prompt, sampling_params, tools=[...])
         while engine.has_unfinished_requests():
             outputs = engine.step()   # <-- emits an inventory record each call
 
         engine.chain.verify()          # tamper-check
+        from ocsf_mapping import to_ocsf_event
         for rec in engine.chain.records:
-            emit_to_ocsf_sink(rec.to_dict())
+            emit_to_ocsf_sink(to_ocsf_event(rec))  # NOT rec.to_dict() -- that carries the raw session_token
     """
 
-    def __init__(self, llm_engine: Any, session_uid: str):
+    def __init__(self, llm_engine: Any, agent: AgentIdentity):
         self._engine = llm_engine
-        self.chain = AgentStateChain(session_uid=session_uid)
+        self.chain = AgentStateChain(agent=agent)
         self._request_tools: dict[str, list[dict[str, Any]]] = {}
         self._request_lora: dict[str, str] = {}
         self._engine_identity = self._probe_engine_identity()

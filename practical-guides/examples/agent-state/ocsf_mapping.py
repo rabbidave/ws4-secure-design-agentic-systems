@@ -64,9 +64,27 @@ def _fingerprint(value: Optional[str]) -> Optional[dict[str, Any]]:
     }
 
 
-def _agent_uid(rec: AgentStateInventory) -> str:
-    """Stable agent identity: `<engine.name>://<engine.model_name>`."""
-    return f"{rec.engine.name}://{rec.engine.model_name}"
+def _agent_object(rec: AgentStateInventory) -> dict[str, Any]:
+    """
+    OCSF's real `ai_agent` object (objects/ai_agent.json upstream), not a
+    bespoke shape: `uid` is the stable identity issued by the agent's
+    authoritative source, `instance_uid` scopes to this session,
+    `version`/`charter` are the agent's own config revision and charter
+    document (both distinct from the model backing it -- that's `engine`/
+    `model` elsewhere on this event, OCSF's `ai_model` concept).
+
+    `session_token` is deliberately never included here -- it already fed
+    the hash chain via `payload_for_hash()` before this function ever runs,
+    so tampering with it is still caught. Only its fingerprint is exposed,
+    so a bearer credential never lands in an OCSF sink/SIEM.
+    """
+    return {
+        "uid": rec.agent.uid,
+        "instance_uid": rec.agent.instance_uid,
+        "version": rec.agent.version,
+        "charter": rec.agent.charter,
+        "token_fingerprint": _fingerprint(rec.agent.token_fingerprint()),
+    }
 
 
 def _tools_object(rec: AgentStateInventory) -> dict[str, Any]:
@@ -129,7 +147,7 @@ def to_ocsf_event(rec: AgentStateInventory) -> dict[str, Any]:
         "type_uid": TYPE_UID,
         "type_name": TYPE_NAME,
         # Discovery-side identification
-        "agent_uid": _agent_uid(rec),
+        "ai_agent": _agent_object(rec),
         "agent_type": "llm_forward_pass",
         "engine": rec.engine.name,
         "engine_version": rec.engine.version,
@@ -138,7 +156,7 @@ def to_ocsf_event(rec: AgentStateInventory) -> dict[str, Any]:
         "instrumentation_library_name": INSTRUMENTATION_NAME,
         "instrumentation_library_version": INSTRUMENTATION_VERSION,
         # Session / chain topology (Fingerprint objects, not bare hash_t)
-        "session_uid": rec.session_uid,
+        "session_uid": rec.agent.instance_uid,
         "forward_pass_seq": rec.forward_pass_seq,
         "captured_at": rec.captured_at_ns // 1_000_000_000,
         "prev_inventory": _fingerprint(rec.prior_inventory_hash),

@@ -34,7 +34,7 @@ import contextvars
 from contextlib import contextmanager
 from typing import Any, Optional
 
-from core import AgentStateChain, EngineIdentity, ToolInventory, ContextInventory
+from core import AgentStateChain, AgentIdentity, EngineIdentity, ToolInventory, ContextInventory
 
 _call_context: contextvars.ContextVar[Optional[dict[str, Any]]] = contextvars.ContextVar(
     "agent_state_call_context", default=None
@@ -48,20 +48,27 @@ class AgentStateLlamaCpp:
     joined against whatever tool/session context was active when it fired.
 
         from llama_cpp import Llama
+        from core import AgentIdentity
+
         raw = Llama(model_path="model.gguf")
-        engine = AgentStateLlamaCpp(raw, session_uid="sess-abc123")
+        engine = AgentStateLlamaCpp(raw, agent=AgentIdentity(
+            uid="spiffe://trust.example/agent/payments-processor",  # stable, from your IdP/control plane
+            instance_uid="sess-abc123",                              # this session/run
+            session_token=oauth_session_token,                       # bearer token backing this session; see SPEC.md §2.7
+        ))
 
         with engine.bind(tools=[...], session_seq_uid="seq-1"):
             result = raw.create_chat_completion(messages=[...], tools=[...])
 
         engine.chain.verify()
+        from ocsf_mapping import to_ocsf_event
         for rec in engine.chain.records:
-            emit_to_ocsf_sink(rec.to_dict())
+            emit_to_ocsf_sink(to_ocsf_event(rec))  # NOT rec.to_dict() -- that carries the raw session_token
     """
 
-    def __init__(self, llama_instance: Any, session_uid: str):
+    def __init__(self, llama_instance: Any, agent: AgentIdentity):
         self._llama = llama_instance
-        self.chain = AgentStateChain(session_uid=session_uid)
+        self.chain = AgentStateChain(agent=agent)
         self._engine_identity = self._probe_engine_identity()
         self._patch_decode()
 

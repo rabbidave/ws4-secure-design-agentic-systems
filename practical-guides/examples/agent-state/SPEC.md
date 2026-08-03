@@ -51,7 +51,7 @@ All `*_hash` and `*_fingerprint` attributes use the **existing OCSF `Fingerprint
 | 6  | `category_name`                        | string_t                | `"Discovery"`                                                                     |
 | 7  | `activity_name`                        | string_t                | `"Unknown"`                                                                       |
 | 8  | `type_name`                            | string_t                | `"Agent Inventory Info:Unknown"`                                                 |
-| 9  | `agent_uid`                            | string_t                | opaque engine identity (e.g. `"vllm://Qwen2.5-7B-Instruct"`); hashed out as `engine.name + "://" + engine.model_name` |
+| 9  | `ai_agent` (object)                    | **ai_agent**             | OCSF's own `ai_agent` object (`uid`/`instance_uid`/`version`/`charter`), not a bespoke shape — see §2.3. Identity of the *agent*, kept separate from `engine`/`model` below (which is what backs it, OCSF's `ai_model` concept) |
 | 10 | `agent_type`                           | string_t (enum)         | `"llm_forward_pass"`                                                              |
 | 11 | `engine`                               | string_t                | `engine.name` (vLLM or llama.cpp)                                                  |
 | 12 | `engine_version`                       | string_t                | `engine.version`                                                                  |
@@ -59,7 +59,7 @@ All `*_hash` and `*_fingerprint` attributes use the **existing OCSF `Fingerprint
 | 14 | `model_revision`                       | string_t (nullable)     | weights hash or HF commit                                                          |
 | 15 | `instrumentation_library_name`         | string_t                | constant `"agent-state"`                                                          |
 | 16 | `instrumentation_library_version`      | string_t                | `"1.0"`                                                                          |
-| 17 | `session_uid`                          | string_t                | identifies the chat/conversation this forward pass belongs to                       |
+| 17 | `session_uid`                          | string_t                | identifies the chat/conversation this forward pass belongs to; same value as `ai_agent.instance_uid` (#9) — kept as its own top-level attribute for the `gen_ai.conversation.id` cross-reference (§3.3), even though the source of truth is `AgentIdentity.instance_uid` |
 | 18 | `forward_pass_seq`                     | long                    | monotonic per session                                                              |
 | 19 | `captured_at`                          | timestamp_t             | `captured_at_ns // 1e9` (seconds since epoch)                                       |
 | 20 | `prev_inventory`                       | Fingerprint             | `{algorithm_id: 3, algorithm: "SHA-256", value: <prior hash>}`; `value = "0"*64` for the chain root |
@@ -72,6 +72,13 @@ All `*_hash` and `*_fingerprint` attributes use the **existing OCSF `Fingerprint
 The chain still needs a top-level pointer attribute (we use `prev_inventory`), not a position inside the `Fingerprint` object — the `Fingerprint` object has no notion of `prior`, and that's correct: it models a single digest, not chain topology. The chain pointer lives on the event class; the digest value lives in the Fingerprint object.
 
 ### 2.3 Embedded objects
+
+**AgentIdentityInfo** (`agent_state.ai_agent`) — OCSF's real `ai_agent` object, not a bespoke shape (same reuse pattern as `Fingerprint`, §2.6):
+- `uid` : string_t — stable identity issued by the agent's authoritative source (control plane, registry, or IdP); does not change across sessions
+- `instance_uid` : string_t — scopes to this one running session; the `AgentStateChain` this record came from is keyed on it, and it is what `session_uid` (#17) mirrors at the top level
+- `version` : string_t (nullable) — the agent's own code/config revision, distinct from `engine_version`/`model_revision` (which describe what's backing it, not the agent itself)
+- `charter` : string_t (nullable) — pointer or hash to the agent's charter document, if any
+- `token_fingerprint` : **Fingerprint** (nullable) — `sha256` of the OAuth 2.0 session token backing this session (§2.7); the raw token itself never appears here or anywhere downstream
 
 **AgentToolsInfo** (`agent_state.tools`):
 - `names` : string_t[] — sorted tool names
@@ -95,7 +102,7 @@ Side-by-side comparison with `User Inventory Info [5003]`:
 
 | field                  | User Inventory Info            | Agent Inventory Info                  |
 |------------------------|--------------------------------|---------------------------------------|
-| `*_uid`                | `user_uid`                     | `agent_uid`                           |
+| `*_uid`                | `user_uid`                     | `ai_agent.uid` (+ `ai_agent.instance_uid` for session scope) |
 | `*_type`               | `user_type`                    | `agent_type`                          |
 | inventory record id    | `record_uid`                   | `inventory_hash` (hash → record id) |
 | chained prev ref       | —                              | `prev_inventory_hash`                 |
@@ -129,6 +136,19 @@ We avoid inventing a new hash type by reusing OCSF's existing **`Fingerprint` ob
 
 **Why the chain still needs the top-level `prev_inventory` pointer**: `Fingerprint` is a flat `{algorithm, value}` pair; it has no slot for the predecessor's value. A hash chain needs both ends. We could have introduced a new `HashChain` object, but that would inflate the surface — instead, the event class itself carries `prev_inventory` and `inventory` both as Fingerprint instances, and the chain is implied by the convention `rec[i].prev_inventory.value == rec[i-1].inventory.value` (verified by `AgentStateChain.verify()`).
 
+### 2.7 Agent identity and session attestation (OAuth 2.0)
+
+`AgentIdentity.session_token` (§2.3) is an OAuth 2.0 bearer/session token issued by the deployment's existing Identity Provider — not a signature scheme this package invents or ships. That choice is deliberate and keeps `core.py`'s zero-third-party-dependency property (§1.1) intact: `core.py` never parses, verifies, or generates a signature. It only does two things with the token, both stdlib-only:
+
+1. **Binds it into the hash chain.** `session_token` is a field on `AgentIdentity`, which is a field on every `AgentStateInventory` record, which means it's in scope for `payload_for_hash()` like everything else (§5.1). Swap in a different session's token — or drop it — and every downstream `inventory_hash` changes, exactly like tampering with `tools` or `context`. The chain doesn't validate the token; it makes the token's presence and value tamper-evident, same guarantee it already gives every other field.
+2. **Exposes only a fingerprint downstream.** `AgentIdentity.token_fingerprint()` is `sha256(session_token)`, and it's the *only* token-derived value that reaches `ocsf_mapping.to_ocsf_event()` or `otel_bridge.attributes_for_event()` (`ai_agent.token_fingerprint`, §2.3). The raw token is deliberately excluded from both — a bearer credential has no business landing in a SIEM or OTLP collector. (`AgentStateInventory.to_dict()` does still include the raw token, since it feeds the hash — that method is documented as being for local hashing/verification only; `to_ocsf_event()` is the externally-safe projection, and the hooks' docstrings emit that, not `to_dict()`, to any sink.)
+
+**Attestation** follows from (1) and (2) without this package doing any cryptography beyond `hashlib`: the token is already signed by the issuing IdP (standard JWS, if it's a JWT). A verifier who independently holds the token — because it was presented over the same authenticated transport that produced this record, ordinary OAuth2/OIDC practice, not something specific to agent-state — can check its signature against the IdP's published keys (JWKS) and confirm `token_fingerprint` in the emitted event matches `sha256(token)`. That establishes both that the session was authenticated *and* that this specific chain segment came from that authenticated session, entirely with tooling the verifier already has for OAuth.
+
+**Portability** follows from the same property. Because the binding rides on a standard bearer token rather than a package-specific signature, a session's chain — including its `kv_state_fingerprint` values (§3.4) — can be handed off between engines or hosts (e.g., migrating a long-running session from one vLLM replica to another, or from vLLM to llama.cpp mid-session) as long as the same `AgentIdentity` and a still-valid token travel with it. The receiving host's new records carry the same `instance_uid`, so a downstream verifier treats the pre- and post-handoff segments as one continuous session rather than two unrelated ones, and validates both against the same IdP rather than needing a second trust mechanism for the new host.
+
+This is narrower than a full authorization protocol — `agent-state` only needs an identity token to bind and fingerprint, not a request/response handshake. A related but separate proposal, [`rfc-mcp_handshake.md`](https://github.com/cosai-oasis/ws4-secure-design-agentic-systems/blob/main/rfc-mcp_handshake.md), specifies a fuller ephemeral-token handshake for authorizing individual tool invocations; `AgentIdentity.session_token` is compatible with (and could be sourced from) that handshake's `authentication.session_token`, but this spec doesn't require it — any OAuth 2.0 session token from the deployment's IdP is sufficient.
+
 ## 3. OpenTelemetry bridge
 
 ### 3.1 Event identity
@@ -144,7 +164,11 @@ We avoid inventing a new hash type by reusing OCSF's existing **`Fingerprint` ob
 | `agent.state.forward_pass_seq`                      | INT               | `forward_pass_seq`                                          |
 | `agent.state.inventory_hash`                        | STRING            | `inventory_hash`                                           |
 | `agent.state.prior_inventory_hash`                  | STRING            | `prior_inventory_hash`                                      |
-| `agent.state.session_uid`                          | STRING            | `session_uid`                                                |
+| `agent.state.session_uid`                          | STRING            | `agent.instance_uid`                                         |
+| `agent.state.agent.uid`                             | STRING            | `agent.uid`                                                  |
+| `agent.state.agent.instance_uid`                    | STRING            | `agent.instance_uid`                                         |
+| `agent.state.agent.version`                         | STRING (nullable) | `agent.version`                                              |
+| `agent.state.agent.token_fingerprint`               | STRING (nullable) | `agent.token_fingerprint()` — sha256 of the session token; never the raw token (§2.7) |
 | `agent.state.engine.name`                           | STRING            | `engine.name`                                               |
 | `agent.state.engine.version`                        | STRING            | `engine.version`                                            |
 | `agent.state.tools.names`                           | STRING_ARRAY      | `tools.tool_names`                                          |
@@ -161,11 +185,11 @@ We avoid inventing a new hash type by reusing OCSF's existing **`Fingerprint` ob
 | `gen_ai.*` semconv                | Stays on parent span? | Rationale                                                  |
 |-----------------------------------|-----------------------|-------------------------------------------------------------|
 | `gen_ai.request.model`             | yes                   | request-level fact, not forward-pass-level                  |
-| `gen_ai.conversation.id`          | yes                   | equals `agent.state.session_uid`; recommended to set both   |
+| `gen_ai.conversation.id`          | yes                   | equals `agent.state.session_uid` (sourced from `AgentIdentity.instance_uid`, §2.7); recommended to set both |
 | `gen_ai.operation.name`            | yes                   | chat / generate_content / text_completion                   |
 | `gen_ai.usage.input_tokens`        | yes                   | lives on the *response* span, not on every forward pass       |
 
-The `agent.state.session_uid` carries the same value as `gen_ai.conversation.id` — the bridge should set both to make the cross-join trivial in any OTLP consumer.
+The `agent.state.session_uid` carries the same value as `gen_ai.conversation.id` — the bridge should set both to make the cross-join trivial in any OTLP consumer. Both ultimately come from `AgentIdentity.instance_uid`, the same field OCSF's `ai_agent.instance_uid` surfaces (§2.3) — one source of truth threaded through three names for three different consumers.
 
 ### 3.4 KV-state fingerprint source material, per engine
 
@@ -214,7 +238,7 @@ rec[i].prior_inventory_hash = rec[i-1].inventory_hash
 rec[i].inventory_hash = sha256(ascii(prior) || canonical(payload(prior, this_record)))
 ```
 
-Payload fed into the hash excludes `inventory_hash` itself (`AgentStateInventory.payload_for_hash()` strips the field). Every other field is in scope: `schema_version`, `forward_pass_seq`, `captured_at_ns`, full engine identity, `session_uid`, sorted `batch_sequence_uids`, full `tools` and `context`, and `prior_inventory_hash`.
+Payload fed into the hash excludes `inventory_hash` itself (`AgentStateInventory.payload_for_hash()` strips the field). Every other field is in scope: `schema_version`, `forward_pass_seq`, `captured_at_ns`, full engine identity, full agent identity (including the raw `session_token`, not just its fingerprint — see §2.7), sorted `batch_sequence_uids`, full `tools` and `context`, and `prior_inventory_hash`.
 
 ### 5.2 Verify semantics (`AgentStateChain.verify()`)
 

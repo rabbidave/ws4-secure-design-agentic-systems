@@ -120,6 +120,43 @@ class EngineIdentity:
 
 
 @dataclass(frozen=True)
+class AgentIdentity:
+    """
+    Who is running this session -- distinct from which engine/model is
+    backing it (EngineIdentity) and from any single forward pass within it.
+    Field names mirror OCSF's real `ai_agent` object (uid / instance_uid /
+    version / charter) on purpose: this is what lets ocsf_mapping.py emit
+    that object directly instead of a bespoke shape (see §2.3 of SPEC.md).
+
+    `uid` is the stable identity the agent's authoritative source issued it
+    (its control plane, registry, or IdP) -- it does not change across
+    sessions. `instance_uid` scopes to this one running session and is what
+    the chain is keyed on; two AgentStateChain instances sharing a `uid`
+    but different `instance_uid`s are the same agent running two sessions.
+
+    `session_token` is the raw OAuth 2.0 bearer/session token backing this
+    session (see SPEC.md §2.7). This module never parses or verifies it --
+    that's standard OAuth/OIDC tooling on whichever side is doing
+    verification. It still feeds `payload_for_hash()` like every other
+    field, so swapping in a different session's token invalidates the
+    chain the same way tampering with tools/context would. It is
+    deliberately excluded from `ocsf_mapping.to_ocsf_event()` and
+    `otel_bridge.attributes_for_event()` -- only `token_fingerprint()`
+    (a SHA-256 digest, not the bearer secret) is ever serialized downstream.
+    """
+    uid: str
+    instance_uid: str
+    session_token: Optional[str] = None
+    version: Optional[str] = None    # agent's own code/config revision, distinct from engine/model version
+    charter: Optional[str] = None    # pointer/hash to the agent's charter document, if any
+
+    def token_fingerprint(self) -> Optional[str]:
+        if self.session_token is None:
+            return None
+        return _sha256_hex(self.session_token.encode("utf-8"))
+
+
+@dataclass(frozen=True)
 class AgentStateInventory:
     """
     One per-forward-pass inventory record. `inventory_hash` and
@@ -131,7 +168,7 @@ class AgentStateInventory:
     forward_pass_seq: int
     captured_at_ns: int
     engine: EngineIdentity
-    session_uid: str
+    agent: AgentIdentity
     batch_sequence_uids: tuple[str, ...]
     tools: ToolInventory
     context: ContextInventory
@@ -145,6 +182,12 @@ class AgentStateInventory:
         return d
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Full dataclass dict, including `agent.session_token` -- this is the
+        raw bearer credential. Use this for local hashing/verification, not
+        for emission to any sink. `ocsf_mapping.to_ocsf_event()` is the
+        externally-safe projection (token_fingerprint only, no raw token).
+        """
         return asdict(self)
 
 
@@ -157,8 +200,8 @@ class AgentStateChain:
     log service to get useful integrity guarantees within a session.
     """
 
-    def __init__(self, session_uid: str):
-        self.session_uid = session_uid
+    def __init__(self, agent: AgentIdentity):
+        self.agent = agent
         self._seq = 0
         self._last_hash = GENESIS_HASH
         self.records: list[AgentStateInventory] = []
@@ -188,7 +231,7 @@ class AgentStateChain:
             forward_pass_seq=seq,
             captured_at_ns=time.time_ns(),
             engine=engine,
-            session_uid=self.session_uid,
+            agent=self.agent,
             batch_sequence_uids=tuple(sorted(batch_sequence_uids)),
             tools=tools,
             context=context,
@@ -236,6 +279,7 @@ def _with_hash(draft: AgentStateInventory, digest: str) -> AgentStateInventory:
     # dataclasses are frozen; rebuild rather than mutate.
     kwargs = draft.to_dict()
     kwargs["engine"] = draft.engine
+    kwargs["agent"] = draft.agent
     kwargs["tools"] = draft.tools
     kwargs["context"] = draft.context
     kwargs["batch_sequence_uids"] = draft.batch_sequence_uids

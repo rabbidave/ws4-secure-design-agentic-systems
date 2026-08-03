@@ -12,6 +12,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 from core import (
+    AgentIdentity,
     AgentStateChain,
     EngineIdentity,
     ToolInventory,
@@ -23,6 +24,7 @@ from core import (
     SCHEMA_VERSION,
 )
 from dataclasses import asdict
+import json
 from ocsf_mapping import to_ocsf_event
 from otel_bridge import attributes_for_event
 
@@ -45,7 +47,8 @@ def test_chain_round_trip():
         sampling_params_hash="cafebabe", lora_adapters=("adapter-1",),
     )
 
-    chain = AgentStateChain(session_uid="sess-test-1")
+    agent = AgentIdentity(uid="agent-1", instance_uid="sess-test-1")
+    chain = AgentStateChain(agent=agent)
     r0 = chain.record(engine=eng, batch_sequence_uids=["req-1"], tools=tools, context=ctx)
     r1 = chain.record(engine=eng, batch_sequence_uids=["req-2"], tools=tools, context=ctx)
     r2 = chain.record(engine=eng, batch_sequence_uids=["req-3"], tools=tools, context=ctx)
@@ -64,7 +67,7 @@ def test_tamper_detection_works():
     eng = EngineIdentity(
         name="vllm", version="0.9.1", model_name="m", model_revision=None,
     )
-    chain = AgentStateChain(session_uid="sess-test-2")
+    chain = AgentStateChain(agent=AgentIdentity(uid="agent-2", instance_uid="sess-test-2"))
     chain.record(engine=eng, batch_sequence_uids=["a"], tools=ToolInventory(), context=ContextInventory())
     chain.record(engine=eng, batch_sequence_uids=["b"], tools=ToolInventory(), context=ContextInventory())
 
@@ -77,7 +80,7 @@ def test_tamper_detection_works():
         forward_pass_seq=rec1.forward_pass_seq,
         captured_at_ns=rec1.captured_at_ns,
         engine=rec1.engine,
-        session_uid=rec1.session_uid,
+        agent=rec1.agent,
         batch_sequence_uids=rec1.batch_sequence_uids,
         tools=rec1.tools,
         context=rec1.context,
@@ -95,7 +98,7 @@ def test_asdict_shape():
     ctx = ContextInventory(prompt_token_count=5, context_hash="c", sampling_params_hash="s")
     inv = AgentStateInventory(
         schema_version=SCHEMA_VERSION, forward_pass_seq=0, captured_at_ns=0,
-        engine=eng, session_uid="s", batch_sequence_uids=("a",),
+        engine=eng, agent=AgentIdentity(uid="agent-3", instance_uid="s"), batch_sequence_uids=("a",),
         tools=tools, context=ctx,
         prior_inventory_hash=GENESIS_HASH, inventory_hash="abc",
     )
@@ -107,7 +110,7 @@ def test_asdict_shape():
 
 
 def test_records_list_is_exposed_publicly():
-    chain = AgentStateChain(session_uid="x")
+    chain = AgentStateChain(agent=AgentIdentity(uid="agent-4", instance_uid="x"))
     # The deliverables spec says the new on_record should be a no-op unless
     # something subscribes. Confirm `records` is indeed a plain list we can use.
     assert isinstance(chain.records, list)
@@ -139,7 +142,7 @@ def test_kv_state_hash_flows_through_chain_and_downstream():
     assert ctx_none.kv_state_hash is None
 
     # (c) participates in the chain / tamper-evidence the same as any field
-    chain = AgentStateChain(session_uid="sess-kv-1")
+    chain = AgentStateChain(agent=AgentIdentity(uid="agent-kv", instance_uid="sess-kv-1"))
     r0 = chain.record(
         engine=eng, batch_sequence_uids=["seq-1"],
         tools=ToolInventory(), context=ctx_a,
@@ -163,6 +166,47 @@ def test_kv_state_hash_flows_through_chain_and_downstream():
     print("kv_state_hash: deterministic, chained, tamper-sensitive, and reaches OCSF + OTel: OK")
 
 
+def test_session_token_binds_chain_but_never_leaks_downstream():
+    """
+    The whole point of AgentIdentity.session_token is that it's an OAuth
+    bearer credential: it must (a) be bound into the tamper-evidence chain
+    like everything else, so a different session's token can't be swapped
+    in silently, and (b) never appear in anything meant to leave the
+    process -- OCSF events, OTel attributes -- since those are meant for a
+    SIEM/collector, not a credential store. Only token_fingerprint (a
+    SHA-256 digest) should cross that boundary.
+    """
+    eng = EngineIdentity(name="vllm", version="x", model_name="m")
+
+    agent_a = AgentIdentity(uid="agent-x", instance_uid="sess-a", session_token="token-AAA")
+    agent_b = AgentIdentity(uid="agent-x", instance_uid="sess-a", session_token="token-BBB")
+
+    chain_a = AgentStateChain(agent=agent_a)
+    r_a = chain_a.record(engine=eng, batch_sequence_uids=["req-1"], tools=ToolInventory(), context=ContextInventory())
+
+    chain_b = AgentStateChain(agent=agent_b)
+    r_b = chain_b.record(engine=eng, batch_sequence_uids=["req-1"], tools=ToolInventory(), context=ContextInventory())
+
+    # (a) same uid/instance_uid/engine/batch, only the token differs -- hash must differ.
+    assert r_a.inventory_hash != r_b.inventory_hash, "session_token must feed the hash chain"
+    assert r_a.agent.token_fingerprint() != r_b.agent.token_fingerprint()
+    assert r_a.agent.token_fingerprint() == _sha256_hex(b"token-AAA")
+
+    # (b) raw token must not appear anywhere in the OCSF or OTel projections.
+    ocsf_event = to_ocsf_event(r_a)
+    otel_attrs = attributes_for_event(r_a)
+    assert ocsf_event["ai_agent"]["token_fingerprint"]["value"] == r_a.agent.token_fingerprint()
+    assert "token-AAA" not in json.dumps(ocsf_event), "raw session_token leaked into OCSF event"
+    assert "token-AAA" not in json.dumps(otel_attrs, default=str), "raw session_token leaked into OTel attributes"
+    assert otel_attrs["agent.state.agent.token_fingerprint"] == r_a.agent.token_fingerprint()
+
+    # No token supplied at all -- fingerprint is None, not a crash.
+    anon_agent = AgentIdentity(uid="agent-y", instance_uid="sess-anon")
+    assert anon_agent.token_fingerprint() is None
+
+    print("session_token: binds the chain, fingerprint-only downstream, no leak: OK")
+
+
 if __name__ == "__main__":
     test_canonical_bytes_is_deterministic()
     test_chain_round_trip()
@@ -170,4 +214,5 @@ if __name__ == "__main__":
     test_asdict_shape()
     test_records_list_is_exposed_publicly()
     test_kv_state_hash_flows_through_chain_and_downstream()
+    test_session_token_binds_chain_but_never_leaks_downstream()
     print("\nall smoke checks passed")

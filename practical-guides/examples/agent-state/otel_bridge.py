@@ -60,7 +60,12 @@ def attributes_for_event(rec: AgentStateInventory) -> dict[str, Any]:
         "agent.state.forward_pass_seq": rec.forward_pass_seq,
         "agent.state.inventory_hash": rec.inventory_hash,
         "agent.state.prior_inventory_hash": rec.prior_inventory_hash,
-        "agent.state.session_uid": rec.session_uid,
+        "agent.state.session_uid": rec.agent.instance_uid,
+        "agent.state.agent.uid": rec.agent.uid,
+        "agent.state.agent.instance_uid": rec.agent.instance_uid,
+        "agent.state.agent.version": rec.agent.version,
+        # Never rec.agent.session_token -- bearer credential, not for telemetry. See SPEC.md §2.7.
+        "agent.state.agent.token_fingerprint": rec.agent.token_fingerprint(),
         "agent.state.engine.name": rec.engine.name,
         "agent.state.engine.version": rec.engine.version,
         "agent.state.tools.names": list(rec.tools.tool_names),
